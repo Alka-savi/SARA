@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07111f">
+<title>SARA | Personal AI</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#07111f;color:#eaf6ff;font-family:Arial,sans-serif}
+header{text-align:center;padding:28px 16px 20px;background:linear-gradient(150deg,#102d48,#07111f)}
+.orb{width:94px;height:94px;border:2px solid #56dfff;border-radius:50%;margin:auto;display:grid;place-items:center;box-shadow:0 0 30px #149acb66;font-size:36px;color:#76e8ff}
+h1{letter-spacing:8px;color:#79e7ff;margin-bottom:5px}
+.sub{color:#9cb6ca;font-size:12px;letter-spacing:3px}
+main{max-width:650px;margin:auto;padding:14px}
+.card{background:#0d1b2b;border:1px solid #24445c;border-radius:16px;padding:17px;margin-bottom:14px}
+h2{font-size:16px;color:#8ceaff;margin:0 0 14px}
+button,input,textarea{font:inherit}
+button{background:#123a54;color:#e8faff;border:1px solid #28627d;padding:12px;border-radius:10px;cursor:pointer}
+button:active{opacity:.7}
+.primary{background:#087fa3;border:0;font-weight:bold}
+input,textarea{width:100%;background:#071321;border:1px solid #29475b;color:white;padding:12px;border-radius:9px;margin:5px 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.stat{background:#071522;border-radius:10px;padding:12px;text-align:center}
+.num{font-size:26px;color:#7ce8ff;font-weight:bold}
+small,.muted{color:#9db5c7}
+#reply{min-height:42px;line-height:1.5}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row button{flex:1}
+label{font-size:13px;color:#b8ccdb}
+footer{text-align:center;color:#68849a;font-size:12px;padding:20px}
+</style>
+</head>
+<body>
+<header>
+<div class="orb">S</div>
+<h1>SARA</h1>
+<div class="sub">STRATEGIC ADAPTIVE RESPONSE ASSISTANT</div>
+<p class="muted">Good to see you, Lokkesh.</p>
+</header>
+<main>
+<section class="card">
+<h2>◈ SARA SYSTEM</h2>
+<div id="reply" aria-live="polite">All systems ready. What's today's mission, boss?</div>
+<div class="row">
+<button class="primary" onclick="listen()">🎙 Talk to SARA</button>
+<button onclick="speak('Hello Lokkesh. SARA systems are online. Let us make today count.')">🔊 Speak</button>
+<button onclick="stopVoice()">🔇 Stop</button>
+</div>
+<p class="muted" style="font-size:12px">Voice recognition depends on your browser and may require internet access.</p>
+<input id="command" placeholder="Type a command, e.g. study 30 minutes">
+<button class="primary" style="width:100%" onclick="runCommand()">Send command</button>
+</section>
+
+<section class="card">
+<h2>◈ YOUR PROGRESS</h2>
+<div class="grid">
+<div class="stat"><div class="num" id="studyTotal">0</div><small>Study minutes</small></div>
+<div class="stat"><div class="num" id="workouts">0</div><small>Workout sessions</small></div>
+<div class="stat"><div class="num" id="pushTotal">0</div><small>Push-ups</small></div>
+<div class="stat"><div class="num" id="streak">0</div><small>Study days logged</small></div>
+</div>
+</section>
+
+<section class="card">
+<h2>◈ STUDY MISSION</h2>
+<label>Study subject</label>
+<input id="subject" placeholder="e.g. Physics">
+<label>Study duration (minutes)</label>
+<input id="minutes" type="number" min="1" value="25">
+<div class="row">
+<button class="primary" onclick="startStudy()">▶ Start timer</button>
+<button onclick="finishStudy()">✓ Log study</button>
+</div>
+<h2 id="timer" style="margin-top:16px">25:00</h2>
+<p class="muted">Starting the timer does not automatically save study time. Tap Log study when finished.</p>
+</section>
+
+<section class="card">
+<h2>◈ CALISTHENICS LOG</h2>
+<label>Push-ups</label><input id="pushups" type="number" min="0" value="0">
+<label>Pull-ups</label><input id="pullups" type="number" min="0" value="0">
+<label>Squats</label><input id="squats" type="number" min="0" value="0">
+<label>Workout duration (minutes)</label><input id="duration" type="number" min="0" value="0">
+<button class="primary" style="width:100%" onclick="logWorkout()">Save workout</button>
+</section>
+
+<section class="card">
+<h2>◈ DAILY GOALS</h2>
+<textarea id="goals" rows="4" placeholder="1. Finish Physics revision&#10;2. Train for 20 minutes&#10;3. Sleep on time"></textarea>
+<button class="primary" style="width:100%" onclick="saveGoals()">Save my goals</button>
+</section>
+
+<section class="card">
+<h2>◈ RECENT ACTIVITY</h2>
+<div id="history" class="muted">No activity logged yet.</div>
+<div class="row" style="margin-top:12px">
+<button onclick="exportData()">Export progress</button>
+<button onclick="clearHistory()">Clear activity</button>
+</div>
+</section>
+<footer>SARA v1.0 • Built for Lokkesh • Your mission, your progress</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const getData=()=>{try{return JSON.parse(localStorage.getItem('saraData'))||{study:0,push:0,sessions:0,days:[],history:[],goals:''}}catch(e){return {study:0,push:0,sessions:0,days:[],history:[],goals:''}}};
+let data=getData(),remaining=1500,interval=null;
+function save(){localStorage.setItem('saraData',JSON.stringify(data));render()}
+function addHistory(s){data.history.unshift(new Date().toLocaleString()+' — '+s);data.history=data.history.slice(0,30);save()}
+function render(){
+$('studyTotal').textContent=data.study;
+$('workouts').textContent=data.sessions;
+$('pushTotal').textContent=data.push;
+$('streak').textContent=data.days.length;
+$('history').innerHTML=data.history.length?data.history.map(x=>'<p>'+escapeHTML(x)+'</p>').join(''):'No activity logged yet.';
+$('goals').value=data.goals||'';
+}
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function speak(text){$('reply').textContent=text;if('speechSynthesis'in window){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(text);u.rate=1; speechSynthesis.speak(u)}}
+function stopVoice(){if('speechSynthesis'in window)speechSynthesis.cancel();if(window.recognition)window.recognition.stop()}
+function listen(){
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SR){speak('Voice recognition is not available in this browser. Please type your command instead.');return}
+try{let r=new SR();window.recognition=r;r.lang='en-IN';r.onresult=e=>{$('command').value=e.results[0][0].transcript;runCommand()};r.onerror=()=>speak('I could not hear that. Please try again or type your command.');r.start();speak('I am listening, boss.')}catch(e){speak('Please allow microphone access and try again.')}
+}
+function runCommand(){
+let c=$('command').value.trim().toLowerCase();if(!c)return;
+if(c.includes('hello')||c.includes('hi sara'))speak('Hello Lokkesh. SARA is online. What is your mission?');
+else if(c.includes('progress'))speak('You have studied '+data.study+' minutes, logged '+data.sessions+' workouts, and recorded '+data.push+' push-ups.');
+else if(c.includes('goal'))speak(data.goals||'You have not saved your goals yet.');
+else if(c.includes('study')){speak('Ready for your study mission. Enter your subject and duration, then start the timer.')}
+else if(c.includes('workout')||c.includes('exercise'))speak('Workout protocol ready. Enter your repetitions in the calisthenics log and save your workout.');
+else if(c.includes('time'))speak('The time is '+new Date().toLocaleTimeString());
+else if(c.includes('date'))speak('Today is '+new Date().toLocaleDateString());
+else speak('I heard: '+c+'. I can report your progress, help start a study session, or guide your workout logging.');
+}
+function startStudy(){
+let m=Math.max(1,parseInt($('minutes').value)||25);remaining=m*60;
+clearInterval(interval);updateTimer();
+interval=setInterval(()=>{remaining--;updateTimer();if(remaining<=0){clearInterval(interval);interval=null;speak('Study timer complete, Lokkesh. Remember to log your study session.')}},1000);
+speak('Study mission started for '+m+' minutes. Focus, boss.');
+}
+function updateTimer(){$('timer').textContent=Math.floor(remaining/60).toString().padStart(2,'0')+':'+(remaining%60).toString().padStart(2,'0')}
+function finishStudy(){
+let m=Math.max(1,parseInt($('minutes').value)||25);
+clearInterval(interval);interval=null;
+data.study+=m;let today=new Date().toISOString().slice(0,10);if(!data.days.includes(today))data.days.push(today);
+addHistory('Studied '+($('subject').value||'General study')+' for '+m+' minutes.');
+speak('Study logged. Great work, Lokkesh.');
+}
+function logWorkout(){
+let p=Math.max(0,parseInt($('pushups').value)||0),u=Math.max(0,parseInt($('pullups').value)||0),s=Math.max(0,parseInt($('squats').value)||0),m=Math.max(0,parseInt($('duration').value)||0);
+if(p+u+s+m===0){speak('Enter your workout numbers first, boss.');return}
+data.push+=p;data.sessions++;addHistory('Workout: '+p+' push-ups, '+u+' pull-ups, '+s+' squats, '+m+' minutes.');
+speak('Workout saved. Every rep counts. Proud of your effort, boss.');
+}
+function saveGoals(){data.goals=$('goals').value;save();speak('Goals saved, Lokkesh. One mission at a time.')}
+function exportData(){
+let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sara-progress.json';a.click();URL.revokeObjectURL(a.href)
+}
+function clearHistory(){if(confirm('Clear all activity and progress? This cannot be undone.')){data={study:0,push:0,sessions:0,days:[],history:[],goals:''};save();speak('Activity cleared.')}}
+render();
+</script>
+</body>
+</html>
